@@ -87,8 +87,26 @@ export class BatchRequestsService {
       )
       .subscribe(queue => {
         // If only one request
-        if (queue.length === 1) {
+
+        let differentApis = [];
+
+        queue.forEach((req) => {
+          const { path } = this.getUrlParts(req.req.url)
+          
+          const differentApi = differentApis.find(x => x.api == path.slice(1).split('/')[0]);
+
+          if(!differentApi) {
+            differentApis = [...differentApis, {api: path.slice(1).split('/')[0], reqs: [req]}]
+          } else {
+            differentApi.reqs = [...differentApi.reqs, req];
+          }
+        })
+
+        differentApis.forEach((differentApi) => {
+          const queue = differentApi.reqs;
+          if (queue.length === 1) {
           const one = queue[0];
+
           one.next.handle(one.req).subscribe(
             update => {
               one.result.next(update);
@@ -104,7 +122,12 @@ export class BatchRequestsService {
         }
 
         const requests = queue.map(n => n.req);
-        const batchRequest = this.batch(requests);
+        
+
+        const batchRequest = this.batch(requests, differentApi.api);
+
+
+
         this.httpClient
           .request<ArrayBuffer | Blob | FormData | string | null>(
             batchRequest
@@ -138,6 +161,8 @@ export class BatchRequestsService {
               }
             }
           );
+        });
+        
       });
   }
 
@@ -147,7 +172,7 @@ export class BatchRequestsService {
     return result;
   }
 
-  private batch(requests: HttpRequest<any>[]): HttpRequest<any> {
+  private batch(requests: HttpRequest<any>[], apiPath: string): HttpRequest<any> {
     const bodyParts = [];
 
     requests.forEach((req, id) => {
@@ -157,6 +182,7 @@ export class BatchRequestsService {
       bodyParts.push(
         `${CONTENT_TYPE}: ${CONTENT_TYPE_HTTP}`,
         `${CONTENT_ID}: <${CONTENT_ID_PREFIX}+${id}>`,
+        `Content-Transfer-Encoding: binary`,
         EMPTY_STRING
       );
 
@@ -187,7 +213,7 @@ export class BatchRequestsService {
 
     return new HttpRequest(
       this.config.batchMethod,
-      this.config.batchPath,
+      `/${apiPath}${this.config.batchPath}`,
       bodyParts.join(NEW_LINE),
       {
         headers: this.headers,
@@ -204,52 +230,44 @@ export class BatchRequestsService {
   ): { ok: boolean, response: HttpResponse<any> | HttpErrorResponse }[] {
     const contentTypeHeaderValue = response.headers.get(CONTENT_TYPE);
     // tslint:disable-next-line:no-null-keyword
-    if (
-      contentTypeHeaderValue == null ||
-      contentTypeHeaderValue.indexOf(CONTENT_TYPE_BATCH) === -1
-    ) {
-      throw new Error(
-        `A batched response must contain a ${CONTENT_TYPE}: ${CONTENT_TYPE_MIXED} header`
-      );
-    }
+    // if (
+    //   contentTypeHeaderValue == null ||
+    //   contentTypeHeaderValue.indexOf(CONTENT_TYPE_BATCH) === -1
+    // ) {
+    //   throw new Error(
+    //     `A batched response must contain a ${CONTENT_TYPE}: ${CONTENT_TYPE_MIXED} header`
+    //   );
+    // }
 
-    const boundary = contentTypeHeaderValue
-      .split(CONTENT_TYPE_BATCH)[1]
-      .replace(/"/g, EMPTY_STRING);
+    // const boundary = contentTypeHeaderValue
+    //   .split(CONTENT_TYPE_BATCH)[1]
+    //   .replace(/"/g, EMPTY_STRING);
 
-    return response.body
-      .toString()
-      .split(DOUBLE_DASH + boundary)
-      .filter(part => {
-        return (
-          part !== EMPTY_STRING &&
-          part !== DOUBLE_DASH + NEW_LINE &&
-          !!(part && part.trim())
-        );
-      })
+    const bodyParsed = JSON.parse(response.body.toString());
+
+    return bodyParsed
+      .responses
       .map((part, requestIndex) => {
-        // splitting by two new lines gets
-        // 1. The batch content type header
-        // 2. The actual response http + headers
-        // 3. The response body (if any)
-        const batchedParts = part.split(NEW_LINE + NEW_LINE);
+        
         let headers = new HttpHeaders();
-        let status = 200;
         let statusText = 'Ok';
-        const meta = batchedParts[1];
-        const body = batchedParts[2];
+        // const meta = batchedParts[1];
+        // const body = batchedParts[2];
 
-        meta.split(NEW_LINE).forEach((header, i) => {
-          if (i === 0) {
-            const [protocol, statusCode, ...statusTextArray] = header.split(SPACE);
-            status = parseInt(statusCode, 10);
-            statusText = statusTextArray.join(SPACE);
-          } else {
-            const [key, value] = header.split(': ');
-            headers = headers.append(key, value);
-          }
-        });
+        // meta.split(NEW_LINE).forEach((header, i) => {
+        //   if (i === 0) {
+        //     const [protocol, statusCode, ...statusTextArray] = header.split(SPACE);
+        //     status = parseInt(statusCode, 10);
+        //     statusText = statusTextArray.join(SPACE);
+        //   } else {
+        //     const [key, value] = header.split(': ');
+        //     headers = headers.append(key, value);
+        //   }
+        // });
 
+        headers = new HttpHeaders(part.headers);
+        const body = part.body;
+        const status = part.status;
         const request = requests[requestIndex];
 
         const {

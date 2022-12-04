@@ -1,6 +1,6 @@
 export const HTTP_VERSION_1_1 = 'HTTP/1.1';
 export const CONTENT_TYPE = 'Content-Type';
-export const CONTENT_TYPE_HTTP = 'application/http; msgtype=request';
+export const CONTENT_TYPE_HTTP = 'application/http';
 export const CONTENT_TYPE_MIXED = 'multipart/mixed; boundary=';
 export const CONTENT_TYPE_BATCH = 'multipart/batch; boundary=';
 export const CONTENT_ID = 'Content-ID';

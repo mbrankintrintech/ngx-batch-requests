@@ -10,7 +10,7 @@
       "prefix": "batch",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-ng-packagr:build",
+          "builder": "@angular-devkit/build-angular:ng-packagr",
           "options": {
             "tsConfig": "projects/ngx-batch-requests/tsconfig.lib.json",
             "project": "projects/ngx-batch-requests/ng-package.json"
@@ -37,6 +37,5 @@
           }
         }
       }
-    }},
-  "defaultProject": "ngx-batch-requests"
+    }}
 }

@@ -3,9 +3,6 @@
   "dest": "../../dist/ngx-batch-requests",
   "lib": {
     "entryFile": "src/public-api.ts"
-  },
-  "whitelistedNonPeerDependencies": [
-    "lodash.defaultsdeep",
-    "ngx-rxjs-zone-scheduler"
-  ]
+  }
+
 }

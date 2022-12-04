@@ -1,10 +1,9 @@
 import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
-import { HttpJsonParseError } from '@angular/common/http/src/response';
 
 export const CONTENT_ID = 'Content-ID';
 export const CONTENT_ID_PREFIX = 'b29c5de2-0db4-490b-b421-6a51b598bd22';
 export const CONTENT_TYPE = 'Content-Type';
-export const CONTENT_TYPE_HTTP = 'application/http; msgtype=request';
+export const CONTENT_TYPE_HTTP = 'application/http';
 export const CONTENT_TYPE_MIXED = 'multipart/mixed; boundary=';
 export const CONTENT_TYPE_BATCH = 'multipart/batch; boundary=';
 export const CONTENT_TYPE_JSON = 'application/json; charset=utf-8';
@@ -66,7 +65,7 @@ export const parseResponseLikeAngular = (req, status, statusText, headers, body)
         // Even though the response status was 2xx, this is still an error.
         ok = false;
         // The parse error contains the text of the body that failed to parse.
-        body = { error, text: body } as HttpJsonParseError;
+        body = { error, text: body } as any;
       }
     }
   }
